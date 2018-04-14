@@ -1,0 +1,102 @@
+<!--Ant(another neat tool---另一个整洁的工具)-->
+
+<?xml version="1.0"?>
+<project default="dist" name="Project A">
+    <description>
+        一段描述信息，没有实际作用。
+    </description>
+    <!--property 元素相当于变量，存放一定的值，一旦给定以后不能改变，只能通过控制台命令行给初始值。
+                一般用 value 给其赋值，这里用 location 代替 value 是因为 location 属性专门设
+                计用于以平台无关的方式包含文件系统路径，也就是当前路径。-->
+    <property name="srcDir" location="."/>
+    <property name="buildDir" location="classes"/>
+    <property name="distDir" location="dist"/>
+    
+    <!--一个target 元素就是一个任务，一个步骤，如果命令行没有指定开始任务，则由 project 元素的 default 属性决定要执行的任务-->
+    <target name="init" description="在元素中指定描述信息！">
+        <echo message="这里的信息将被输出到控制台！">
+        <!--tstamp 元素一般不定义属性和内容，不产生任何输出；相反，它根据当前系统时间和日期设置 Ant 以下属性：
+        属性                说明                                    例子
+        DSTAMP            设置为当前日期，默认格式为yyyymmdd        20031217
+        TSTAMP            设置为当前时间，默认格式为hhmm            1603
+        TODAY            设置为当前日期，带完整的月份            2003 年12 月17 日-->
+        <tstamp/>
+        <!--mkdir 元素用来创建目录 dir 属性用来指定目录路径-->
+        <!--delete 元素用来删除目录 ${buildDir} 引用 property 元素指定的 name 为 buildDir 的属性变量-->
+        <mkdir dir="${buildDir}"/>
+        <mkdir dir="${distDir}"/>
+        <!--文件操作：
+            <copy file="src/Test.java" tofile="src/TestCopy.java"/> 把文件 Test.java 拷贝一份 TestCopy.java 
+            <move file="src/Test.java" tofile="src/TestCopy.java"/> 把文件 Test.java 重新命名为 TestCopy.java
+            <copy file="src/Test.java" todir="archive"/> 把文件 Test.java 从 src 目录复制一份到 archive 目录下
+            <move file="src/Test.java" todir="archive"/> 把文件 Test.java 从 src 目录下移动到 archive 目录下
+            <replace file="input.txt" token="old" value="new"/>replace 任务，它执行文件中的查找和替换操作。
+            token 属性指定要查找的字符串，
+            value 属性指定一个新的字符串，
+            查找到的标记字符串的所有实例都被替换为这个新的字符串.
+            替换操作将在文件本身之内的适当位置进行。为了提供更详细的输出，可把 summary 属性设置为
+            true。这将导致该任务输出找到和替换的标记字符串实例的数目。
+            <copy todir="archive">---使用模式匹配复制多个文件
+                <fileset dir="src">--fileset 代替 file 属性
+                    <include name="*.java"/>--包含 src 目录下所有的 *.java 文件
+                    <exclude name="*.class"/>--不包含 src 目录下所有的 *.class 文件
+                </fileset>
+            </copy>-->
+    </target>
+
+    <!--target 元素的 depends 属性用来设置多个 target 元素之间的依赖关系，如果要执行某个任务，必须先执行 depends 属性指定的所有
+        它所依赖的 target 元素，只有它所依赖的所有 target 元素都执行完了才能执行它自己-->
+    <target name="com" depends="init">
+        <!--javac 元素把 srcdir 指定目录下所有 *.java 文件编译成 *.class 文件到 destdir 指定的目录下！
+            如果不指定 destdir 属性，那么默认编译到同一目录下。其他属性：
+             classpath：等价于javac 的-classpath 选项。
+             debug="true"：指示编译器应该带调试信息编译源文件。
+             fork="true"：当你希望指定编译器的某些内存选项，或者需要使用一种不同级别的编译器的时候。该属性设置为“true”
+             executable="d:sdk141injavac"：指定一个不同的 javac 可执行文件。
+             memoryMaximumSize="128m"：向上边指定的 javac 传递一个最大内存设置-->
+        <javac srcdir="${srcDir}" destdir="${buildDir}"/>
+    </target>
+
+    <target name="dist" depends="com">
+        <!--jar 元素：在编译 Java 源文件之后，结果类文件通常被打包到一个 JAR 文件中，这个文件类似 zip 归档文
+            件。每个 JAR 文件都包含一个清单文件，它可以指定该 JAR 文件的属性。
+            还可以把目录下的所有内容打包为 WAR 文件
+            destfile:打包后的文件全名
+            basedir:要打包的文件路径-->
+        <jar destfile="${distDir}/package-${DSTAMP}.jar" basedir="${buildDir}">
+            <!--manifest 属性允许指定一个用作该 JAR 文件的清单的文件。清单文件的内容还可以使用 manifest
+                任务在生成文件中指定。这个任务能够像文件系统写入一个清单文件，或者能够实际嵌套在 jar 之
+                内，以便一次性地创建清单文件和 JAR 文件。-->
+            <manifest>
+                <attribute name="Built-By" value="${user.name}"/>
+                <attribute name="Main-Class" value="package.Main"/>
+            </manifest>
+        </jar>
+        <jar destfile="${distDir}/package-src-${DSTAMP}.jar" basedir="${srcDir}"/>
+    </target>
+
+    <target name="zip" depends="dist">
+        <!--zip 元素用来创建 zip 包，和 jar 元素相似-->
+        <zip destfile="output.zip" basedir="output"/>
+        <!--相同的语法也可用于创建 tar 文件。 还可以使用 GZip 和 BZip 任务来压缩文件。-->
+        <tar destfile="output.tar" basedir="output"/>
+        <gzip src="output.tar" zipfile="output.tar.gz"/>
+        <!--解压缩和提取文件同样也很简单.-->
+        <unzip src="output.tar.gz" dest="extractDir"/>
+        <!--还可以包括 overwrite 属性来控制覆盖行为。默认设置是覆盖与正在被提取的归档文件中的条目相
+            匹配的所有现有文件。相关的任务名称是 untar、unjar、gunzip 和 bunzip2。-->
+    </target>
+
+    <!--编写一个 clean目标来从目标目录移除生成的任何类文件是个很好的习惯。如果想要确
+        保所有源文件都已编译，就可以使用这个任务。这种行为刻画了 Ant 的许多任务的特点：
+        如果某个任务能够确定所请求的操作不需要执行，那么该操作就会被跳过。-->
+    <target name="clean">
+        <delete dir="${buildDir}"/>
+        <delete dir="${distDir}"/>
+    </target>
+</project>
+
+
+
+网站：
+https://blog.csdn.net/yubo_725/article/details/52326746
